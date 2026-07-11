@@ -12,12 +12,14 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
 
-    # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./cyberbuddy.db"
+    # Database — PostgreSQL
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/cyberbuddy"
 
-    # ChromaDB
-    CHROMA_PERSIST_DIR: str = "./chroma_data"
-    CHROMA_COLLECTION_NAME: str = "it_knowledge"
+    # Milvus Vector Database
+    MILVUS_HOST: str = "localhost"
+    MILVUS_PORT: int = 19530
+    MILVUS_COLLECTION_NAME: str = "it_knowledge"
+    MILVUS_DIMENSION: int = 1536  # text-embedding-3-small dimension
 
     # LLM
     LLM_MODEL: str = "gpt-4o"

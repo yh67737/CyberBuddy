@@ -15,7 +15,7 @@ CyberBuddy/
 │   │   ├── core/              # 配置、中间件、安全
 │   │   ├── db/                # SQLAlchemy 模型 + 数据库
 │   │   ├── orchestration/     # LangGraph 编排
-│   │   ├── rag/               # ChromaDB 向量检索
+│   │   ├── rag/               # Milvus 向量检索
 │   │   ├── skills/            # 高危熔断预案
 │   │   ├── mcp/               # MCP 工具生态 + DLQ
 │   │   └── main.py            # 应用入口
@@ -47,9 +47,9 @@ CyberBuddy/
 - 配置 `.gitignore`、`README.md`
 
 ### 1.2 开发环境配置
-- **后端**：Python 3.11+ 虚拟环境, FastAPI, LangGraph, ChromaDB, SQLAlchemy, WebSocket 库
+- **后端**：Python 3.11+ 虚拟环境, FastAPI, LangGraph, Milvus, SQLAlchemy, WebSocket 库
 - **前端**：Next.js 脚手架, TailwindCSS, WebSocket 客户端
-- **基础设施**：Docker Compose 编排 ChromaDB、MySQL 等依赖服务
+- **基础设施**：Docker Compose 编排 Milvus、PostgreSQL 等依赖服务
 
 ---
 
@@ -57,7 +57,7 @@ CyberBuddy/
 
 ### 2.1 数据库模型与持久化层
 - SQLAlchemy 数据模型：用户表、会话历史表（Memory）、异步任务记录表、安全事件表
-- 配置 SQLite（开发）/ MySQL（生产）
+- 配置 PostgreSQL 数据库连接
 - Alembic 数据库迁移
 
 ### 2.2 FastAPI 基础框架
@@ -77,7 +77,7 @@ CyberBuddy/
 | 2.4a | **MemoryAgent** | 上下文与画像维持 | 读取员工画像 → 解析历史会话 → 决定回复深浅 |
 | 2.4b | **SupervisorAgent** | 意图路由大脑 | 分发至 CHAT / CONSULT / RISK 三条路由 |
 | 2.4c | **ITSupportAgent** | 普通问询响应 | 处理低风险基础 IT 对话，无需强制 RAG |
-| 2.4d | **KnowledgeAgent** | 文档检索增强 | 对接 ChromaDB，提取精确排障步骤 |
+| 2.4d | **KnowledgeAgent** | 文档检索增强 | 对接 Milvus，提取精确排障步骤 |
 | 2.4e | **SecurityGuardian** | 高危安全拦截 | 嗅探异常特征，触发即刻熔断 |
 | 2.4f | **SecOpsAgent** | 专家交接与通报 | 生成标准工单 → WebSocket 推送 Dashboard |
 
@@ -87,7 +87,7 @@ CyberBuddy/
 - 流式状态透传（Agent 思考过程实时推送前端）
 
 ### 2.6 RAG 检索增强系统
-- ChromaDB 本地向量数据库搭建
+- Milvus 本地向量数据库搭建
 - 企业 IT 手册与安全合规制度文档导入（Embedding + 分块策略）
 - KnowledgeAgent 检索 + 生成链路
 
@@ -169,7 +169,7 @@ Step 1  → 项目骨架搭建（git + 目录 + 依赖）
 Step 2  → 后端 FastAPI 骨架 + 数据库模型
 Step 3  → Agent 基类 + SupervisorAgent 路由
 Step 4  → 其余 5 个 Agent + LangGraph 编排
-Step 5  → RAG 系统（ChromaDB + KnowledgeAgent）
+Step 5  → RAG 系统（Milvus + KnowledgeAgent）
 Step 6  → WebSocket/SSE 实时通信
 Step 7  → 高危熔断 Skill + MCP 工具 + DLQ
 Step 8  → 前端用户门户（聊天界面）

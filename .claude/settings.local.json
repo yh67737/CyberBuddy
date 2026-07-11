@@ -20,7 +20,8 @@
       "Bash(npm cache *)",
       "Bash(sudo chown -R 501:20 \"/Users/angela/.npm\")",
       "Bash(npm run *)",
-      "Bash(git commit -m 'chore: 开发环境配置完成 *)"
+      "Bash(git commit -m 'chore: 开发环境配置完成 *)",
+      "Bash(git commit -m 'refactor: 向量库迁移至 Milvus，关系库迁移至 PostgreSQL *)"
     ]
   }
 }

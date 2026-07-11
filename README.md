@@ -9,8 +9,8 @@
 | 层级 | 技术 |
 |------|------|
 | **前端** | Next.js 14+, TypeScript, TailwindCSS, WebSocket |
-| **后端** | Python 3.11+, FastAPI, LangGraph, ChromaDB, SQLAlchemy |
-| **基础设施** | Docker, MySQL/SQLite, Redis |
+| **后端** | Python 3.12+, FastAPI, LangGraph, Milvus, SQLAlchemy |
+| **基础设施** | Docker, PostgreSQL, Milvus, Redis |
 
 ## 快速开始
 
@@ -43,7 +43,7 @@ CyberBuddy/
 │   │   ├── core/      # 配置、中间件
 │   │   ├── db/        # 数据库模型
 │   │   ├── orchestration/  # LangGraph 编排
-│   │   ├── rag/       # ChromaDB 向量检索
+│   │   ├── rag/       # Milvus 向量检索
 │   │   ├── skills/    # 高危熔断预案
 │   │   └── mcp/       # MCP 工具 + DLQ
 │   └── tests/         # 自动化测试
