@@ -5,7 +5,22 @@
       "Bash(git init *)",
       "Bash(npx create-next-app@latest frontend --typescript --tailwind --eslint --app --src-dir --no-import-alias --use-npm)",
       "Bash(git add *)",
-      "Bash(git commit -m 'feat: CyberBuddy 项目初始化 *)"
+      "Bash(git commit -m 'feat: CyberBuddy 项目初始化 *)",
+      "Bash(which python3.10 python3.11 python3.12 python3.13 2>/dev/null; ls /usr/local/bin/python3* /opt/homebrew/bin/python3* 2>/dev/null)",
+      "Read(//usr/local/bin/**)",
+      "Bash(python3 -m venv .venv)",
+      "Bash(brew install *)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//Library/Frameworks/Python.framework/**)",
+      "Bash(mdfind \"kMDItemDisplayName == 'python3*'\")",
+      "WebFetch(domain:www.python.org)",
+      "WebSearch",
+      "Bash(python3.12 --version)",
+      "Bash(npm install *)",
+      "Bash(npm cache *)",
+      "Bash(sudo chown -R 501:20 \"/Users/angela/.npm\")",
+      "Bash(npm run *)",
+      "Bash(git commit -m 'chore: 开发环境配置完成 *)"
     ]
   }
 }

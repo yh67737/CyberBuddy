@@ -40,6 +40,9 @@ Thumbs.db
 # ChromaDB
 chroma_data/
 
+# Local npm cache
+.npm-cache/
+
 # Docker
 .docker/
 
