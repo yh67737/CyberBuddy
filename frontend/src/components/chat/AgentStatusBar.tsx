@@ -34,7 +34,7 @@ export function AgentStatusBar({ agentState, isSecurityMode }: AgentStatusBarPro
 
       {/* Agent pipeline visualization */}
       <div className="flex items-center gap-2 text-xs">
-        {["Memory", "Supervisor", "ITSupport", "Knowledge", "SecurityGuardian", "SecOps"].map(
+        {["MemoryAgent", "SupervisorAgent", "ITSupportAgent", "KnowledgeAgent", "SecurityGuardian", "SecOpsAgent"].map(
           (agent, i) => (
             <div key={agent} className="flex items-center gap-1">
               {i > 0 && <span className="text-slate-600">→</span>}

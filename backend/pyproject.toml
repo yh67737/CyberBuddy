@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+markers = [
+    "integration: tests that require LLM API access (skip with -m 'not integration')",
+    "unit: fast unit tests that don't need external services",
+]
+asyncio_mode = "auto"
+testpaths = ["tests"]

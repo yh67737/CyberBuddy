@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { AgentStatusBar } from "@/components/chat/AgentStatusBar";
@@ -9,14 +9,18 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { Message, AgentState } from "@/lib/types";
 
 export default function ChatPage() {
+  const [sessionId, setSessionId] = useState(() => `session-${Date.now()}`);
   const [messages, setMessages] = useState<Message[]>([]);
   const [agentState, setAgentState] = useState<AgentState | null>(null);
   const [isSecurityMode, setIsSecurityMode] = useState(false);
   const [currentStreaming, setCurrentStreaming] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { sendMessage, isConnected } = useWebSocket({
-    sessionId: "demo-session",
+  const {
+    sendMessage,
+    isConnected,
+  } = useWebSocket({
+    sessionId,
     onAgentState: (state: AgentState) => setAgentState(state),
     onToken: (token: string) => {
       setCurrentStreaming((prev) => prev + token);
@@ -25,18 +29,22 @@ export default function ChatPage() {
       if (routeType === "RISK") {
         setIsSecurityMode(true);
       }
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "agent",
-          content: currentStreaming,
-          agentRole: agentState?.agent || "Agent",
-          routeType,
-          timestamp: new Date(),
-        },
-      ]);
-      setCurrentStreaming("");
+      setCurrentStreaming((prev) => {
+        if (prev) {
+          setMessages((msgs) => [
+            ...msgs,
+            {
+              id: crypto.randomUUID(),
+              role: "agent",
+              content: prev,
+              agentRole: agentState?.agent || "Agent",
+              routeType,
+              timestamp: new Date(),
+            },
+          ]);
+        }
+        return "";
+      });
     },
     onSecurityAlert: (alert: { level: string; message: string }) => {
       setIsSecurityMode(true);
@@ -54,7 +62,7 @@ export default function ChatPage() {
     },
   });
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, currentStreaming]);
@@ -70,12 +78,30 @@ export default function ChatPage() {
     sendMessage({ type: "chat", content });
   };
 
+  const handleNewSession = useCallback(() => {
+    setSessionId(`session-${Date.now()}`);
+    setMessages([]);
+    setCurrentStreaming("");
+    setIsSecurityMode(false);
+    setAgentState(null);
+  }, []);
+
+  const handleSelectSession = useCallback((id: string) => {
+    setSessionId(id);
+    setMessages([]);
+    setCurrentStreaming("");
+    setIsSecurityMode(false);
+    // TODO: load messages for this session from API
+  }, []);
+
   return (
-    <div
-      className={`flex-1 flex ${isSecurityMode ? "security-mode" : ""}`}
-    >
+    <div className={`flex-1 flex ${isSecurityMode ? "ring-2 ring-red-500 ring-inset" : ""}`}>
       {/* Session Sidebar */}
-      <Sidebar />
+      <Sidebar
+        activeSessionId={sessionId}
+        onNewSession={handleNewSession}
+        onSelectSession={handleSelectSession}
+      />
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">

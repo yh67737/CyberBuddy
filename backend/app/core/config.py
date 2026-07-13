@@ -19,15 +19,15 @@ class Settings(BaseSettings):
     MILVUS_HOST: str = "localhost"
     MILVUS_PORT: int = 19530
     MILVUS_COLLECTION_NAME: str = "it_knowledge"
-    MILVUS_DIMENSION: int = 1536  # text-embedding-3-small dimension
+    MILVUS_DIMENSION: int = 1024  # BAAI/bge-large-zh-v1.5 dimension
 
     # LLM
-    LLM_MODEL: str = "gpt-4o"
-    LLM_API_KEY: Optional[str] = None
-    LLM_BASE_URL: Optional[str] = None
+    LLM_MODEL: str = "deepseek-v4-pro"
+    LLM_API_KEY: Optional[str] = "sk-eb21576b2d904a60b439d778c81f3f82"
+    LLM_BASE_URL: Optional[str] = "https://api.deepseek.com"
 
     # Embedding
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_MODEL: str = "BAAI/bge-large-zh-v1.5"
 
     # Redis (for Celery / async queue)
     REDIS_URL: str = "redis://localhost:6379/0"

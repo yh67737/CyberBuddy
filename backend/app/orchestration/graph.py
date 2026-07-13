@@ -6,6 +6,8 @@ Agent pipeline flow:
                                                → [RISK] SecurityGuardian → SecOpsAgent
 """
 
+import time
+
 from langgraph.graph import StateGraph, END
 from app.agents.base import AgentState, RouteType, agent_registry
 
@@ -51,16 +53,34 @@ def create_agent_graph() -> StateGraph:
 
 
 def _run_agent(agent_name: str):
-    """Factory: returns an async function that runs the named agent on state."""
+    """Factory: returns an async function that runs the named agent on state.
+
+    Records per-agent execution time into state.metadata["agent_timings"]
+    for dashboard analytics (UsageLog).
+    """
     async def node_fn(state: AgentState) -> AgentState:
         agent = agent_registry.get(agent_name)
         if agent is None:
-            # Agent not yet implemented — pass-through
             state.agent_trace.append(f"{agent_name}(passthrough)")
+            _record_timing(state, agent_name, 0)
             return state
+
         state.agent_trace.append(agent_name)
-        return await agent.run(state)
+        t0 = time.perf_counter()
+        try:
+            result = await agent.run(state)
+        finally:
+            elapsed = time.perf_counter() - t0
+            _record_timing(result, agent_name, elapsed)
+        return result
+
     return node_fn
+
+
+def _record_timing(state: AgentState, agent_name: str, elapsed: float) -> None:
+    """Append per-agent timing to state metadata (mutates in place)."""
+    timings = state.metadata.setdefault("agent_timings", {})
+    timings[agent_name] = round(elapsed, 4)
 
 
 def _route_decision(state: AgentState) -> str:

@@ -15,7 +15,6 @@ from pymilvus import (
     DataType,
     utility,
 )
-from pymilvus.client.types import SearchResult
 
 from app.core.config import settings
 
@@ -87,7 +86,7 @@ async def search_knowledge_base(
     collection = _get_collection()
 
     search_params = {"metric_type": "COSINE", "params": {"nprobe": 16}}
-    results: list[SearchResult] = collection.search(
+    results = collection.search(
         data=[query_embedding],
         anns_field="embedding",
         param=search_params,

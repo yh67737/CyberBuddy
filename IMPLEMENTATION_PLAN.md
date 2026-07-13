@@ -98,7 +98,14 @@ CyberBuddy/
 | Skill 1 | `breach_containment_plan` | 嗅探到 RISK | 前台 UI 强制切换红色安全模式 → 输出物理隔离/断网指令 |
 | Skill 2 | `secops_handoff_summary` | 安全事件确认 | 收集关键实体 → 格式化摘要 → WebSocket 推送 Dashboard |
 
-### 2.8 MCP 工具生态与死信队列（DLQ）
+### 2.8 运维分析数据层（Analytics Infrastructure）
+- **使用日志模型**：新增 `UsageLog` 表，记录每次 API 调用的 user_id、route_type、Agent 链路、各 Agent 耗时、Token 消耗、总延迟
+- **Agent 链路追踪**：在 `AgentState.metadata` 中记录每个 Agent 的执行起止时间，端到端延迟
+- **在线用户追踪**：利用 WebSocket 连接/断开事件维护在线用户集合，通过 EventBus 广播 `user_online` / `user_offline` 事件
+- **统计聚合端点**：按时间窗口（小时/天/周）聚合 API 调用量、Token 用量、路由分布、错误率
+- **用户行为查询**：按用户/时间/路由类型筛选对话历史，包含消息内容、Agent 链路、耗时
+
+### 2.9 MCP 工具生态与死信队列（DLQ）
 - 封装 MCP 工具：`create_jira_ticket`、`query_ad_status` 等
 - 异步任务队列（Celery / ARQ）
 - 死信队列：失败重试机制，不阻塞前端流式对话
@@ -124,11 +131,31 @@ CyberBuddy/
 
 ### 3.3 安全运维工作台（SecOps Dashboard）
 
+#### 安全监控
+
 | 功能 | 说明 |
 |------|------|
 | 实时监控大屏 | 高危 Incident 列表 + 实时 WebSocket 弹窗告警 |
 | 安全交接摘要 | Agent 生成的格式化摘要卡片展示 |
 | 工单状态看板 | 异步工单执行状态流转可视化（待处理 → 处理中 → 已完成） |
+
+#### 用户行为审计
+
+| 功能 | 说明 |
+|------|------|
+| 对话记录查询 | 按用户/时间范围/路由类型筛选对话历史，查看完整消息内容 |
+| Agent 链路追踪 | 每条消息经过的 Agent 列表、各 Agent 耗时、最终路由决策 |
+| 用户活跃度 | 每日/每周活跃用户数、人均对话次数、最常问的问题类型分布 |
+
+#### 平台运营统计
+
+| 功能 | 说明 |
+|------|------|
+| API 调用量 | 按小时/天/周粒度的 LLM API 调用次数、Token 消耗量、平均延迟 |
+| 路由分布 | CHAT / CONSULT / RISK 三类路由的占比饼图与趋势折线图 |
+| 在线用户数 | 当前 WebSocket 连接数（实时在线） |
+| 模型用量 | 按模型（DeepSeek / Embedding）统计调用量及费用估算 |
+| 错误监控 | API 调用失败率、Agent 异常次数、DB 写入失败次数的时间曲线 |
 
 ---
 
@@ -166,15 +193,13 @@ CyberBuddy/
 
 ```
 Step 1  → 项目骨架搭建（git + 目录 + 依赖）
-Step 2  → 后端 FastAPI 骨架 + 数据库模型
-Step 3  → Agent 基类 + SupervisorAgent 路由
-Step 4  → 其余 5 个 Agent + LangGraph 编排
-Step 5  → RAG 系统（Milvus + KnowledgeAgent）
-Step 6  → WebSocket/SSE 实时通信
-Step 7  → 高危熔断 Skill + MCP 工具 + DLQ
-Step 8  → 前端用户门户（聊天界面）
-Step 9  → 前端运维工作台（Dashboard）
-Step 10 → 联调测试 + 压测 + 部署
+Step 2  → 后端 Agent 全链路（6 Agent + LangGraph + WebSocket 流式）✅ 已完成
+Step 3  → 运维分析数据层（UsageLog + 链路追踪 + 在线用户 + 统计聚合）
+Step 4  → 数据库填充与测试（导入企业 IT 手册到 Milvus + 集成测试）
+Step 5  → 前端用户门户（聊天界面 + Agent 状态可视化 + 安全模式 UI）
+Step 6  → 前端运维工作台（安全监控 + 审计日志 + 运营统计大屏）
+Step 7  → MCP 工具 + DLQ（Jira / AD / 死信队列）
+Step 8  → 联调测试 + 压测 + 部署
 ```
 
 ---

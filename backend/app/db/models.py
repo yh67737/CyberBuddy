@@ -114,3 +114,25 @@ class AsyncTask(Base):
     max_retries: Mapped[int] = mapped_column(Integer, default=3)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+
+class UsageLog(Base):
+    """Per-request analytics record for dashboard monitoring.
+
+    Written once per agent pipeline execution. Tracks which agents ran,
+    how long each took, LLM token consumption, and total end-to-end latency.
+    Aggregated by the dashboard stats endpoints for operational visibility.
+    """
+    __tablename__ = "usage_logs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), index=True)
+    session_id: Mapped[str] = mapped_column(String(36), index=True)
+    route_type: Mapped[Optional[str]] = mapped_column(String(20), index=True)  # CHAT / CONSULT / RISK
+    agent_trace: Mapped[Optional[list]] = mapped_column(JSON, default=list)    # ["MemoryAgent", "SupervisorAgent", ...]
+    agent_durations: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)  # {"MemoryAgent": 0.002, "SupervisorAgent": 1.5, ...}
+    llm_tokens: Mapped[Optional[int]] = mapped_column(Integer, default=0)       # Total tokens consumed (input + output)
+    total_latency_ms: Mapped[float] = mapped_column(default=0.0)                 # End-to-end wall-clock latency
+    status: Mapped[str] = mapped_column(String(20), default="success")           # success / error
+    error_message: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

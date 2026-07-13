@@ -20,7 +20,7 @@ class AgentState:
     user_id: str
     user_input: str
     user_profile: dict = field(default_factory=dict)       # From MemoryAgent
-    conversation_history: list[dict] = field(default_factory=dict)
+    conversation_history: list[dict] = field(default_factory=list)
     route_type: Optional[RouteType] = None                  # Set by SupervisorAgent
     rag_context: list[str] = field(default_factory=list)    # Retrieved docs from KnowledgeAgent
     security_flags: list[str] = field(default_factory=list) # Set by SecurityGuardian
