@@ -15,35 +15,54 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* Security mode — red theme override applied via JS */
-.security-mode body {
-  --color-primary: #ef4444;
-  background: #1a0000;
-}
-
-/* Chat message animation */
+/* ── Chat message animation ────────────────────────────────────── */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message-enter {
-  animation: fadeInUp 0.3s ease-out;
+  animation: fadeInUp 0.35s ease-out;
 }
 
-/* Typing cursor for streaming text */
-.typing-cursor::after {
-  content: "▊";
-  animation: blink 1s step-end infinite;
-}
-
+/* ── Typing cursor for streaming text ──────────────────────────── */
 @keyframes blink {
+  0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
 
-/* Scrollbar styling */
+.typing-cursor::after {
+  content: "▊";
+  animation: blink 1s step-end infinite;
+  color: #60a5fa;
+}
+
+/* ── Security mode active state ────────────────────────────────── */
+.security-mode-active {
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.15), inset 0 0 30px rgba(239, 68, 68, 0.05);
+  transition: box-shadow 0.5s ease;
+}
+
+/* Red glow pulse for critical alert banner */
+@keyframes redPulse {
+  0%, 100% {
+    background-color: rgba(127, 29, 29, 0.6);
+  }
+  50% {
+    background-color: rgba(127, 29, 29, 0.8);
+  }
+}
+
+/* ── Scrollbar styling ─────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: #1e293b;
@@ -51,4 +70,17 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #475569;
   border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ── Prose overrides for Markdown rendering ────────────────────── */
+.prose pre {
+  background: rgb(15, 23, 42) !important;
+  border: 1px solid rgb(51, 65, 85);
+}
+.prose code::before,
+.prose code::after {
+  content: none !important;
 }
