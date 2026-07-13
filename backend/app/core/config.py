@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # LLM
     LLM_MODEL: str = "deepseek-v4-pro"
-    LLM_API_KEY: Optional[str] = "sk-eb21576b2d904a60b439d778c81f3f82"
+    LLM_API_KEY: Optional[str] = None
     LLM_BASE_URL: Optional[str] = "https://api.deepseek.com"
 
     # Embedding
