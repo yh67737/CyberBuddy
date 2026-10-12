@@ -83,14 +83,14 @@ async def send_message(message: ChatMessage) -> ChatResponse:
 # WebSocket streaming endpoint
 # ---------------------------------------------------------------------------
 
-# Agent display names in Chinese for real-time status
+# Agent display names in Chinese for real-time status (keyed by graph node name)
 _AGENT_STATUS_LABELS = {
-    "MemoryAgent": ("MemoryAgent", "正在加载上下文..."),
-    "SupervisorAgent": ("SupervisorAgent", "正在分析意图..."),
-    "ITSupportAgent": ("ITSupportAgent", "正在生成回复..."),
-    "KnowledgeAgent": ("KnowledgeAgent", "正在检索知识库..."),
-    "SecurityGuardian": ("SecurityGuardian", "正在分析安全风险..."),
-    "SecOpsAgent": ("SecOpsAgent", "正在生成安全交接摘要..."),
+    "memory_agent": ("MemoryAgent", "正在加载上下文..."),
+    "supervisor_agent": ("SupervisorAgent", "正在分析意图..."),
+    "it_support_agent": ("ITSupportAgent", "正在生成回复..."),
+    "knowledge_agent": ("KnowledgeAgent", "正在检索知识库..."),
+    "security_guardian": ("SecurityGuardian", "正在分析安全风险..."),
+    "secops_agent": ("SecOpsAgent", "正在生成安全交接摘要..."),
 }
 
 # Sentence boundary pattern for chunking agent responses
@@ -299,12 +299,14 @@ async def _persist_turn(
     """
     try:
         async with async_session() as db:
-            # Ensure the session row exists (create if new)
+            # Ensure the session row exists (create if new, using the
+            # client-provided id as the primary key).
             existing = await SessionRepository.get_by_id(db, session_id)
             if existing is None:
                 await SessionRepository.create(
                     db, user_id=user_id,
                     title=user_input[:50] if len(user_input) > 50 else user_input,
+                    session_id=session_id,
                 )
                 existing = await SessionRepository.get_by_id(db, session_id)
                 if existing is None:

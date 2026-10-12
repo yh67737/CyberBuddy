@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.npm-cache/
+
+# Local env (NEXT_PUBLIC_* passed via --build-arg instead)
+.env
+.env.local
+.env.*.local
+
+*.log
+.DS_Store
+README.md

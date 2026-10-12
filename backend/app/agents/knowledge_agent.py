@@ -12,6 +12,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from loguru import logger
 
 from app.agents.base import BaseAgent, AgentState
+from app.core.config import settings
 from app.core.llm import get_llm
 from app.core.embeddings import get_embedding_service
 
@@ -26,7 +27,13 @@ _RAG_SYSTEM_PROMPT = """你是 CyberBuddy，企业 IT 智能助手。你的职�
 - 如果文档中有明确的排障步骤，请按步骤列出
 - 如果文档中的信息不足以解决问题，请如实说明，并给出建议
 - 不要在文档内容之外编造信息
-- 引用文档来源时，注明文档标题
+- 引用文档来源时，注明来源（如 StackExchange、IBM TechQA、企业手册等）
+
+## 数据时效性判断
+每条检索结果会标注来源日期。请根据问题类型判断信息是否可能过时：
+- **系统配置/命令/API**: 超过 2 年的内容需提醒用户"可能已过时，建议验证"
+- **概念原理/安全实践**: 时间敏感度低，可直接使用
+- 如果信息可能过时，请在回复末尾注明数据来源日期，让用户自行判断
 
 ## 回复格式
 1. 先简要确认用户的问题
@@ -87,26 +94,75 @@ class KnowledgeAgent(BaseAgent):
     # Retrieval
     # ------------------------------------------------------------------
 
-    async def _retrieve_docs(self, query: str, top_k: int = 5) -> list[str]:
-        """Embed the query and search Milvus for relevant documents.
+    async def _retrieve_docs(
+        self, query: str, top_k: int = 5, min_score: float | None = None
+    ) -> list[dict]:
+        """Embed the query and search both Milvus collections.
 
-        Returns a list of document text strings, or empty list on failure.
+        Searches the document-chunk collection (``it_knowledge``) and the
+        QA-pair collection (``qa_pairs``) in parallel, merges results by
+        similarity score, and returns the top-k above ``min_score``.
+
+        Returns a list of dicts with keys: ``text``, ``score``, ``metadata``.
+        The ``text`` field holds the content (document chunk or Q+A pair);
+        ``metadata`` includes source, date, tags etc. for freshness checking.
         """
+        if min_score is None:
+            min_score = settings.MILVUS_MIN_SCORE
+
         try:
             svc = get_embedding_service()
             query_vec = await svc.embed_query(query)
 
-            from app.rag.vector_store import search_knowledge_base
+            from app.rag.vector_store import search_knowledge_base, search_qa_pairs
 
-            results = await search_knowledge_base(query_vec, top_k=top_k)
-            docs = [r["text"] for r in results if r.get("text")]
+            # Search both collections concurrently
+            import asyncio
+            docs_task = asyncio.create_task(
+                search_knowledge_base(query_vec, top_k=top_k * 2, min_score=min_score)
+            )
+            qa_task = asyncio.create_task(
+                search_qa_pairs(query_vec, top_k=top_k * 2, min_score=min_score)
+            )
 
-            if docs:
-                logger.debug(f"KnowledgeAgent: retrieved {len(docs)} docs from Milvus")
+            doc_results = await docs_task
+            qa_results = await qa_task
+
+            # Normalize QA results to same format as doc results
+            qa_normalized = []
+            for qa in qa_results:
+                qa_normalized.append({
+                    "text": qa.get("qa_text", ""),
+                    "score": qa.get("score", 0.0),
+                    "metadata": {
+                        "question": qa.get("question", ""),
+                        "answer": qa.get("answer", ""),
+                        "source": qa.get("source", ""),
+                        "source_date": qa.get("date", ""),
+                        "tags": qa.get("tags", ""),
+                        "site": qa.get("site", ""),
+                        "url": qa.get("url", ""),
+                        "type": "qa_pair",
+                    },
+                })
+
+            # Merge and re-rank by score (descending)
+            merged = doc_results + qa_normalized
+            merged.sort(key=lambda r: r.get("score", 0.0), reverse=True)
+
+            top = merged[:top_k]
+
+            if top:
+                qa_count = sum(1 for r in top if r.get("metadata", {}).get("type") == "qa_pair")
+                doc_count = len(top) - qa_count
+                logger.debug(
+                    f"KnowledgeAgent: retrieved {len(top)} results "
+                    f"({doc_count} docs, {qa_count} QA pairs)"
+                )
             else:
-                logger.info("KnowledgeAgent: no matching docs found in Milvus")
+                logger.info("KnowledgeAgent: no matching results in any collection")
 
-            return docs
+            return top
 
         except Exception as exc:
             logger.warning(f"KnowledgeAgent: retrieval failed, continuing without RAG — {exc}")
@@ -132,16 +188,30 @@ class KnowledgeAgent(BaseAgent):
     # Prompt builder
     # ------------------------------------------------------------------
 
-    def _build_messages(self, state: AgentState, docs: list[str]) -> list:
-        """Build the RAG prompt: system + history + retrieved docs + query."""
+    def _build_messages(self, state: AgentState, docs: list[dict]) -> list:
+        """Build the RAG prompt: system + history + retrieved docs + query.
+
+        Each doc is a dict with ``text``, ``score``, and ``metadata``.
+        Metadata includes ``source``, ``source_date``, ``tags``, ``type``
+        so the LLM can judge data freshness.
+        """
         tech = state.user_profile.get("tech_level", "intermediate")
 
         if docs:
             system = SystemMessage(content=_RAG_SYSTEM_PROMPT)
-            # Inject retrieved documents as context
-            docs_block = "\n\n---\n\n".join(
-                f"[文档 {i+1}]\n{d}" for i, d in enumerate(docs)
-            )
+            # Inject retrieved documents with metadata for freshness
+            parts = []
+            for i, d in enumerate(docs):
+                meta = d.get("metadata", {})
+                header = f"[文档 {i+1}]"
+                header += f" | 来源: {meta.get('source', '未知')}"
+                if meta.get("source_date"):
+                    header += f" | 日期: {meta['source_date']}"
+                if meta.get("score"):
+                    header += f" | 相关度: {d['score']:.2f}"
+                parts.append(f"{header}\n{d.get('text', '')}")
+
+            docs_block = "\n\n---\n\n".join(parts)
             messages = [
                 system,
                 HumanMessage(content=f"## 知识库检索结果\n\n{docs_block}"),

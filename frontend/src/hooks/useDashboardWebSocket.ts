@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect } from "react";
 import { SecurityIncident, AsyncTask } from "@/lib/types";
 
 interface UseDashboardWSOptions {
@@ -23,24 +23,39 @@ export function useDashboardWebSocket({
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectDelayRef = useRef(RECONNECT_DELAY_MS);
-  const mountedRef = useRef(true);
   const [isConnected, setIsConnected] = useState(false);
 
-  const connect = useCallback(() => {
-    if (!mountedRef.current) return;
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+  // Keep the latest callbacks in refs so the connection effect runs once on
+  // mount instead of tearing down + reconnecting on every parent render.
+  const onIncidentRef = useRef(onIncident);
+  const onIncidentUpdateRef = useRef(onIncidentUpdate);
+  const onTaskUpdateRef = useRef(onTaskUpdate);
+  const onOnlineCountRef = useRef(onOnlineCount);
+  onIncidentRef.current = onIncident;
+  onIncidentUpdateRef.current = onIncidentUpdate;
+  onTaskUpdateRef.current = onTaskUpdate;
+  onOnlineCountRef.current = onOnlineCount;
 
-    const ws = new WebSocket(`${WS_BASE_URL}/api/v1/dashboard/ws`);
+  useEffect(() => {
+    let disposed = false;
+    let ws: WebSocket | null = null;
 
-    ws.onopen = () => {
-      if (mountedRef.current) {
-        setIsConnected(true);
-        reconnectDelayRef.current = RECONNECT_DELAY_MS;
-      }
-    };
+    const connect = () => {
+      if (disposed) return;
+      if (ws?.readyState === WebSocket.OPEN) return;
 
-    ws.onclose = () => {
-      if (mountedRef.current) {
+      ws = new WebSocket(`${WS_BASE_URL}/api/v1/dashboard/ws`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        if (!disposed) {
+          setIsConnected(true);
+          reconnectDelayRef.current = RECONNECT_DELAY_MS;
+        }
+      };
+
+      ws.onclose = () => {
+        if (disposed) return;
         setIsConnected(false);
         wsRef.current = null;
         const delay = reconnectDelayRef.current;
@@ -48,55 +63,50 @@ export function useDashboardWebSocket({
           reconnectDelayRef.current = Math.min(delay * 2, MAX_RECONNECT_DELAY_MS);
           connect();
         }, delay);
-      }
-    };
+      };
 
-    ws.onerror = () => ws.close();
+      ws.onerror = () => ws?.close();
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        switch (data.type) {
-          case "new_incident":
-            onIncident?.({
-              id: data.session_id || crypto.randomUUID(),
-              severity: data.severity || "medium",
-              title: data.title || "",
-              description: data.description || "",
-              entities: {},
-              agentSummary: "",
-              status: "open",
-              createdAt: data.timestamp || new Date().toISOString(),
-            });
-            break;
-          case "incident_update":
-            onIncidentUpdate?.(data);
-            break;
-          case "task_update":
-            onTaskUpdate?.({
-              id: data.task_id || crypto.randomUUID(),
-              toolName: data.tool_name || "",
-              status: data.status || "pending",
-              createdAt: data.timestamp || new Date().toISOString(),
-              retryCount: data.retry_count || 0,
-            });
-            break;
-          case "user_online_count":
-            onOnlineCount?.(data.count || 0);
-            break;
-          case "pong":
-            break;
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          switch (data.type) {
+            case "new_incident":
+              onIncidentRef.current?.({
+                id: data.session_id || crypto.randomUUID(),
+                severity: data.severity || "medium",
+                title: data.title || "",
+                description: data.description || "",
+                entities: {},
+                agentSummary: "",
+                status: "open",
+                createdAt: data.timestamp || new Date().toISOString(),
+              });
+              break;
+            case "incident_update":
+              onIncidentUpdateRef.current?.(data);
+              break;
+            case "task_update":
+              onTaskUpdateRef.current?.({
+                id: data.task_id || crypto.randomUUID(),
+                toolName: data.tool_name || "",
+                status: data.status || "pending",
+                createdAt: data.timestamp || new Date().toISOString(),
+                retryCount: data.retry_count || 0,
+              });
+              break;
+            case "user_online_count":
+              onOnlineCountRef.current?.(data.count || 0);
+              break;
+            case "pong":
+              break;
+          }
+        } catch (e) {
+          console.error("Dashboard WebSocket parse error:", e);
         }
-      } catch (e) {
-        console.error("Dashboard WebSocket parse error:", e);
-      }
+      };
     };
 
-    wsRef.current = ws;
-  }, [onIncident, onIncidentUpdate, onTaskUpdate, onOnlineCount]);
-
-  useEffect(() => {
-    mountedRef.current = true;
     connect();
 
     const pingInterval = setInterval(() => {
@@ -106,12 +116,14 @@ export function useDashboardWebSocket({
     }, 30000);
 
     return () => {
-      mountedRef.current = false;
+      disposed = true;
       clearInterval(pingInterval);
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       wsRef.current?.close();
+      wsRef.current = null;
+      setIsConnected(false);
     };
-  }, [connect]);
+  }, []);
 
   return { isConnected };
 }

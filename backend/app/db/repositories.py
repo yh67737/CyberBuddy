@@ -78,8 +78,13 @@ class SessionRepository:
         db: AsyncSession,
         user_id: str,
         title: str = "新会话",
+        session_id: Optional[str] = None,
     ) -> Session:
+        """Create a session row. If ``session_id`` is given, it becomes the
+        primary key (the client supplies its own id, e.g. ``session-<ts>``)."""
         session = Session(user_id=user_id, title=title)
+        if session_id is not None:
+            session.id = session_id
         db.add(session)
         await db.commit()
         await db.refresh(session)

@@ -54,3 +54,6 @@ logs/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# RAG 数据源（体积大，由 scripts/ 抓取或克隆生成，不入库）
+data/

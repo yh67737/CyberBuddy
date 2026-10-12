@@ -15,11 +15,15 @@ class Settings(BaseSettings):
     # Database — PostgreSQL
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/cyberbuddy"
 
+    # Feishu (Lark) — incident alert webhook
+    FEISHU_WEBHOOK_URL: str = ""
+
     # Milvus Vector Database
     MILVUS_HOST: str = "localhost"
     MILVUS_PORT: int = 19530
     MILVUS_COLLECTION_NAME: str = "it_knowledge"
     MILVUS_DIMENSION: int = 1024  # BAAI/bge-large-zh-v1.5 dimension
+    MILVUS_MIN_SCORE: float = 0.5  # COSINE similarity threshold for RAG retrieval
 
     # LLM
     LLM_MODEL: str = "deepseek-v4-pro"
@@ -32,8 +36,9 @@ class Settings(BaseSettings):
     # Redis (for Celery / async queue)
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # Security
-    SECRET_KEY: str = "change-me-in-production"
+    # Security — SECRET_KEY is required; no default so a missing value fails
+    # fast at startup instead of silently using an insecure placeholder.
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 

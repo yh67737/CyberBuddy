@@ -23,7 +23,32 @@
       "Bash(git commit -m 'chore: 开发环境配置完成 *)",
       "Bash(git commit -m 'refactor: 向量库迁移至 Milvus，关系库迁移至 PostgreSQL *)",
       "Bash(python3.12 -c \"from app.main import app; print\\('App created successfully'\\)\")",
-      "Bash(pip3.12 list *)"
+      "Bash(pip3.12 list *)",
+      "Bash(git rev-list *)",
+      "Bash(git cat-file *)",
+      "Bash(awk '$1 == \"blob\" && $2 > 1048576 {print $2/1048576 \"MB\", $3}')",
+      "Bash(curl -s --connect-timeout 5 -o /dev/null -w \"%{http_code}\" https://www.baidu.com)",
+      "Bash(curl -s --connect-timeout 5 -o /dev/null -w \"%{http_code}\" https://ghproxy.com)",
+      "Bash(env)",
+      "Bash(git config *)",
+      "Read(//Users/angela/Downloads/TechQA/**)",
+      "Bash(python3)",
+      "Bash(pip3 install *)",
+      "Bash(python3 /Users/angela/Desktop/CyberBuddy/scripts/fetch_stackexchange_qa.py --pages 2 --start-site superuser)",
+      "Bash(python3 scripts/import_to_milvus.py --dry-run)",
+      "Bash(awk '{print $2, $3\"% CPU\", $6/1024\"MB\"}')",
+      "Bash(docker volume *)",
+      "Bash(/Users/angela/Desktop/CyberBuddy/.venv/bin/python3 -c ' *)",
+      "WebFetch(domain:handbook.gitlab.com)",
+      "WebFetch(domain:gitlab.com)",
+      "Bash(python scripts/import_handbook.py --dry-run)",
+      "Bash(python3 scripts/import_handbook.py --dry-run)",
+      "Bash(python3 scripts/import_handbook.py --no-clone --dry-run)",
+      "Bash(awk -F= '{print \"key长度=\" length\\($2\\), \"含引号=\" \\($2 ~ /^\"/ ? \"是\" : \"否\"\\), \"含空格=\" \\($2 ~ / / ? \"是\" : \"否\"\\)}')",
+      "Bash(.venv/bin/python scripts/import_violations.py --dry-run)",
+      "Bash(.venv/bin/python scripts/import_violations.py --drop)",
+      "Bash(.venv/bin/python /tmp/add_critical.py)",
+      "Bash(../.venv/bin/python /tmp/test_violations_retrieval.py)"
     ]
   }
 }

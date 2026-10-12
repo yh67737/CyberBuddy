@@ -24,40 +24,58 @@ _background_tasks: set[asyncio.Task] = set()
 
 
 async def _dlq_worker() -> None:
-    """Dead Letter Queue worker — retries failed async tasks.
+    """Dead Letter Queue worker — retries failed MCP tool calls.
 
-    Runs periodically, re-processing tasks in 'dead_letter' status.
-    In a production deployment this would be a Celery/ARQ worker;
-    for now it is an in-process background loop.
+    Polls the ``async_tasks`` table for rows with ``status=failed`` and
+    retry budget remaining.  Re-runs the tool via its registered retry
+    handler, updates the DB row, and publishes ``task_update`` events
+    so the SecOps Dashboard reflects real-time task state.
     """
-    logger.info("DLQ worker started (polling every 60s)")
+    logger.info("DLQ worker started (polling every 30s)")
     try:
         while True:
-            await asyncio.sleep(60)
-            # TODO: query DB for dead_letter tasks and retry
-            # This will be wired when the MCP/DLQ module lands (Step 2.7+).
+            await asyncio.sleep(30)
+            try:
+                from app.mcp.dead_letter_queue import retry_failed_tasks
+
+                retried = await retry_failed_tasks()
+                if retried:
+                    logger.info(f"DLQ worker: retried {retried} task(s) this cycle")
+            except Exception as exc:
+                logger.error(f"DLQ worker cycle failed: {exc}")
     except asyncio.CancelledError:
         logger.info("DLQ worker cancelled")
         raise
 
 
 async def _preload_milvus() -> None:
-    """Ensure the Milvus collection is loaded and ready before serving requests.
+    """Ensure both Milvus collections are loaded and ready before serving.
 
     Gracefully skips if Milvus is unreachable — the KnowledgeAgent will
     fall back to no-RAG mode at query time.
     """
     try:
-        from app.rag.vector_store import _get_collection
+        from app.rag.vector_store import _get_collection, _get_qa_collection
 
+        # Document chunks collection
         collection = await asyncio.to_thread(_get_collection)
         try:
-            count = collection.num_entities
+            doc_count = collection.num_entities
         except Exception:
-            count = "?"
+            doc_count = "?"
         logger.info(
             f"Milvus collection '{settings.MILVUS_COLLECTION_NAME}' "
-            f"loaded (entities: {count})"
+            f"loaded (entities: {doc_count})"
+        )
+
+        # QA pairs collection
+        qa_collection = await asyncio.to_thread(_get_qa_collection)
+        try:
+            qa_count = qa_collection.num_entities
+        except Exception:
+            qa_count = "?"
+        logger.info(
+            f"Milvus QA collection 'qa_pairs' loaded (entities: {qa_count})"
         )
     except Exception as exc:
         logger.warning(f"Milvus not available, RAG will be disabled: {exc}")
@@ -93,7 +111,13 @@ async def lifespan(app: FastAPI):
 
     logger.info(f"Registered agents: {agent_registry.list_all()}")
 
-    # 4. Start dead-letter queue background worker
+    # 4. Register MCP tool retry handlers for DLQ
+    from app.mcp.tools import _register_dlq_handlers
+
+    _register_dlq_handlers()
+    logger.info("DLQ retry handlers registered")
+
+    # 5. Start dead-letter queue background worker
     dlq_task = asyncio.create_task(_dlq_worker(), name="dlq-worker")
     _background_tasks.add(dlq_task)
 

@@ -67,11 +67,9 @@ def _run_agent(agent_name: str):
 
         state.agent_trace.append(agent_name)
         t0 = time.perf_counter()
-        try:
-            result = await agent.run(state)
-        finally:
-            elapsed = time.perf_counter() - t0
-            _record_timing(result, agent_name, elapsed)
+        result = await agent.run(state)
+        elapsed = time.perf_counter() - t0
+        _record_timing(result, agent_name, elapsed)
         return result
 
     return node_fn

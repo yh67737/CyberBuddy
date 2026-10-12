@@ -1,0 +1,23 @@
+# Secrets — never bake .env into the image
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtualenv / local artifacts
+.venv/
+venv/
+
+# Tests & docs (not needed at runtime)
+tests/
+*.md
+
+# Logs / temp
+*.log
+.DS_Store

@@ -64,6 +64,9 @@ class SecOpsAgent(BaseAgent):
         # Publish update event to EventBus
         await self._publish_update(incident, handoff)
 
+        # Push status update to Feishu
+        await self._push_feishu_update(incident, handoff)
+
         logger.info(
             f"SecOpsAgent: handoff summary generated "
             f"severity={incident.get('severity', 'unknown')}"
@@ -73,6 +76,27 @@ class SecOpsAgent(BaseAgent):
     # ------------------------------------------------------------------
     # Event publishing
     # ------------------------------------------------------------------
+
+    async def _push_feishu_update(self, incident: dict, handoff) -> None:
+        """Push a status-update notification to the Feishu group."""
+        try:
+            from app.mcp.tools import send_feishu_notification
+
+            severity = incident.get("severity", "medium")
+            title = incident.get("title", "安全事件")
+            actions = handoff.recommended_actions or []
+
+            text = (
+                f"📋 安全事件已交接\n"
+                f"事件: [{severity.upper()}] {title}\n"
+                f"摘要: {handoff.summary[:300]}\n"
+                f"建议行动:\n" + "\n".join(f"  • {a}" for a in actions)
+            )
+            result = await send_feishu_notification(text=text)
+            if not result.success:
+                logger.warning(f"SecOpsAgent: Feishu notification failed — {result.error}")
+        except Exception as exc:
+            logger.warning(f"SecOpsAgent: Feishu notification exception — {exc}")
 
     async def _publish_update(self, incident: dict, handoff) -> None:
         """Push an incident-update event to the Dashboard via EventBus."""
